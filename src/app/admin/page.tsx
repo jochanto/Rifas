@@ -94,6 +94,9 @@ function AdminDashboard({ onSignOut }: { onSignOut: () => void }) {
   const [rifaNombre, setRifaNombre] = useState('')
   const [rifaDescripcion, setRifaDescripcion] = useState('')
   const [fechaSorteo, setFechaSorteo] = useState('')
+  const [imagenFile, setImagenFile] = useState<File | null>(null)
+  const [imagenPreview, setImagenPreview] = useState<string | null>(null)
+  const [uploading, setUploading] = useState(false)
   const [error, setError] = useState('')
   const [sorteoLoading, setSorteoLoading] = useState(false)
   const [tab, setTab] = useState<'rifa' | 'historial'>('rifa')
@@ -147,19 +150,49 @@ function AdminDashboard({ onSignOut }: { onSignOut: () => void }) {
     )
   }
 
+  function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0] ?? null
+    setImagenFile(file)
+    if (file) {
+      const reader = new FileReader()
+      reader.onload = (ev) => setImagenPreview(ev.target?.result as string)
+      reader.readAsDataURL(file)
+    } else {
+      setImagenPreview(null)
+    }
+  }
+
   async function crearRifa(e: React.FormEvent) {
     e.preventDefault()
     setError('')
+    setUploading(true)
+
+    let imagen_url: string | null = null
+    if (imagenFile) {
+      const ext = imagenFile.name.split('.').pop()
+      const path = `${Date.now()}.${ext}`
+      const { error: uploadErr } = await supabase.storage
+        .from('rifas-imagenes')
+        .upload(path, imagenFile)
+      if (uploadErr) { setError(uploadErr.message); setUploading(false); return }
+      const { data: urlData } = supabase.storage.from('rifas-imagenes').getPublicUrl(path)
+      imagen_url = urlData.publicUrl
+    }
+
     const { error: err } = await supabase.from('rifas').insert({
       nombre: rifaNombre,
       descripcion: rifaDescripcion || null,
+      imagen_url,
       fecha_sorteo: new Date(fechaSorteo).toISOString(),
       estado: 'activo',
     })
-    if (err) { setError(err.message); return }
+    if (err) { setError(err.message); setUploading(false); return }
     setRifaNombre('')
     setRifaDescripcion('')
     setFechaSorteo('')
+    setImagenFile(null)
+    setImagenPreview(null)
+    setUploading(false)
     loadAll()
   }
 
@@ -271,6 +304,18 @@ function AdminDashboard({ onSignOut }: { onSignOut: () => void }) {
                     />
                   </div>
                   <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Imagen del Premio (opcional)</label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageChange}
+                      className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none text-sm file:mr-3 file:py-1 file:px-3 file:rounded-md file:border-0 file:bg-indigo-50 file:text-indigo-600 file:font-medium file:cursor-pointer"
+                    />
+                    {imagenPreview && (
+                      <img src={imagenPreview} alt="Preview" className="mt-2 rounded-lg max-h-48 object-cover" />
+                    )}
+                  </div>
+                  <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Fecha y Hora del Sorteo</label>
                     <input
                       type="datetime-local"
@@ -280,14 +325,17 @@ function AdminDashboard({ onSignOut }: { onSignOut: () => void }) {
                       required
                     />
                   </div>
-                  <button type="submit" className="w-full bg-indigo-600 text-white py-2 rounded-lg font-medium hover:bg-indigo-700 transition">
-                    Crear Rifa
+                  <button type="submit" disabled={uploading} className="w-full bg-indigo-600 text-white py-2 rounded-lg font-medium hover:bg-indigo-700 transition disabled:opacity-50">
+                    {uploading ? 'Subiendo imagen...' : 'Crear Rifa'}
                   </button>
                 </form>
               </div>
             ) : (
               <div className="space-y-6">
                 <div className="bg-white rounded-xl shadow p-6">
+                  {rifa.imagen_url && (
+                    <img src={rifa.imagen_url} alt={rifa.nombre} className="w-full max-h-64 object-cover rounded-lg mb-4" />
+                  )}
                   <div className="flex justify-between items-start mb-4">
                     <div>
                       <h2 className="text-xl font-bold">{rifa.nombre}</h2>

@@ -27,6 +27,7 @@ export interface Rifa {
   id: string
   nombre: string
   descripcion: string | null
+  imagen_url: string | null
   fecha_sorteo: string
   estado: 'activo' | 'completado'
   fecha_creacion: string
