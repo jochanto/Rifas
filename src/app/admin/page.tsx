@@ -91,6 +91,7 @@ function AdminDashboard({ onSignOut }: { onSignOut: () => void }) {
   const [historial, setHistorial] = useState<(Ganador & { rifa_nombre?: string })[]>([])
   const [nombre, setNombre] = useState('')
   const [numero, setNumero] = useState('')
+  const [telefono, setTelefono] = useState('')
   const [rifaNombre, setRifaNombre] = useState('')
   const [rifaDescripcion, setRifaDescripcion] = useState('')
   const [fechaSorteo, setFechaSorteo] = useState('')
@@ -208,10 +209,12 @@ function AdminDashboard({ onSignOut }: { onSignOut: () => void }) {
       rifa_id: rifa.id,
       nombre_participante: nombre,
       numero: num,
+      telefono: telefono || null,
     })
     if (err) { setError(err.message); return }
     setNombre('')
     setNumero('')
+    setTelefono('')
     loadAll()
   }
 
@@ -239,6 +242,15 @@ function AdminDashboard({ onSignOut }: { onSignOut: () => void }) {
   async function nuevaRifa() {
     setRifa(null)
     setParticipantes([])
+  }
+
+  async function eliminarRifa() {
+    if (!rifa) return
+    if (!confirm('¿Estás seguro de eliminar esta rifa? Se borrarán todos los participantes.')) return
+    await supabase.from('rifas').delete().eq('id', rifa.id)
+    setRifa(null)
+    setParticipantes([])
+    loadAll()
   }
 
   return (
@@ -357,6 +369,12 @@ function AdminDashboard({ onSignOut }: { onSignOut: () => void }) {
                       >
                         Nueva Rifa
                       </button>
+                      <button
+                        onClick={eliminarRifa}
+                        className="bg-red-500 text-white px-4 py-2 rounded-lg font-medium hover:bg-red-600 transition"
+                      >
+                        Eliminar Rifa
+                      </button>
                     </div>
                   </div>
 
@@ -383,6 +401,16 @@ function AdminDashboard({ onSignOut }: { onSignOut: () => void }) {
                         required
                       />
                     </div>
+                    <div className="flex-1 min-w-[160px]">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
+                      <input
+                        type="tel"
+                        value={telefono}
+                        onChange={(e) => setTelefono(e.target.value)}
+                        className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                        placeholder="Ej: 8888-8888"
+                      />
+                    </div>
                     <button type="submit" className="bg-indigo-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-indigo-700 transition">
                       Agregar
                     </button>
@@ -395,17 +423,19 @@ function AdminDashboard({ onSignOut }: { onSignOut: () => void }) {
                       <tr>
                         <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">#</th>
                         <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Nombre</th>
+                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Teléfono</th>
                         <th className="px-4 py-3 text-right text-sm font-medium text-gray-600">Acciones</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y">
                       {participantes.length === 0 ? (
-                        <tr><td colSpan={3} className="px-4 py-8 text-center text-gray-400">No hay participantes aún</td></tr>
+                        <tr><td colSpan={4} className="px-4 py-8 text-center text-gray-400">No hay participantes aún</td></tr>
                       ) : (
                         participantes.map((p) => (
                           <tr key={p.id} className="hover:bg-gray-50">
                             <td className="px-4 py-3 font-bold text-indigo-600">{p.numero}</td>
                             <td className="px-4 py-3">{p.nombre_participante}</td>
+                            <td className="px-4 py-3 text-gray-500">{p.telefono ?? '—'}</td>
                             <td className="px-4 py-3 text-right">
                               <button
                                 onClick={() => eliminarParticipante(p.id)}

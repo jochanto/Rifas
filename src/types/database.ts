@@ -38,6 +38,7 @@ export interface Participante {
   rifa_id: string
   nombre_participante: string
   numero: number
+  telefono: string | null
   fecha_creacion: string
 }
 
