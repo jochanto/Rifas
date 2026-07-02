@@ -95,6 +95,7 @@ function AdminDashboard({ onSignOut }: { onSignOut: () => void }) {
   const [telefono, setTelefono] = useState('')
   const [rifaNombre, setRifaNombre] = useState('')
   const [rifaDescripcion, setRifaDescripcion] = useState('')
+  const [rifaPrecio, setRifaPrecio] = useState('')
   const [fechaSorteo, setFechaSorteo] = useState('')
   const [imagenFile, setImagenFile] = useState<File | null>(null)
   const [imagenPreview, setImagenPreview] = useState<string | null>(null)
@@ -185,12 +186,14 @@ function AdminDashboard({ onSignOut }: { onSignOut: () => void }) {
       nombre: rifaNombre,
       descripcion: rifaDescripcion || null,
       imagen_url,
+      precio_numero: rifaPrecio ? parseInt(rifaPrecio) : null,
       fecha_sorteo: new Date(fechaSorteo).toISOString(),
       estado: 'activo',
     })
     if (err) { setError(err.message); setUploading(false); return }
     setRifaNombre('')
     setRifaDescripcion('')
+    setRifaPrecio('')
     setFechaSorteo('')
     setImagenFile(null)
     setImagenPreview(null)
@@ -317,6 +320,20 @@ function AdminDashboard({ onSignOut }: { onSignOut: () => void }) {
                     />
                   </div>
                   <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Valor por Número (₡ Colones)</label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-2 text-gray-400 font-medium">₡</span>
+                      <input
+                        type="number"
+                        min={0}
+                        value={rifaPrecio}
+                        onChange={(e) => setRifaPrecio(e.target.value)}
+                        className="w-full border rounded-lg pl-8 pr-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                        placeholder="Ej: 1000"
+                      />
+                    </div>
+                  </div>
+                  <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Imagen del Premio (opcional)</label>
                     <input
                       type="file"
@@ -358,6 +375,11 @@ function AdminDashboard({ onSignOut }: { onSignOut: () => void }) {
                       <p className="text-gray-500 text-sm">
                         Sorteo: {new Date(rifa.fecha_sorteo).toLocaleString('es-CR')} &bull; {participantes.length}/100 números asignados
                       </p>
+                      {rifa.precio_numero != null && (
+                        <p className="text-green-600 font-semibold text-sm mt-1">
+                          Valor por número: {rifa.precio_numero.toLocaleString('es-CR', { style: 'currency', currency: 'CRC', maximumFractionDigits: 0 })}
+                        </p>
+                      )}
                     </div>
                     <div className="flex gap-2">
                       <button
