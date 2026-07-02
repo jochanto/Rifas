@@ -7,6 +7,7 @@ import Countdown from '@/components/Countdown'
 import NumberGrid from '@/components/NumberGrid'
 import WinnerDisplay from '@/components/WinnerDisplay'
 import Link from 'next/link'
+import Image from 'next/image'
 
 export default function Home() {
   const [rifa, setRifa] = useState<Rifa | null>(null)
@@ -92,11 +93,14 @@ export default function Home() {
           <>
             <div className="text-center mb-8">
               {rifa.imagen_url && (
-                <img
-                  src={rifa.imagen_url}
-                  alt={rifa.nombre}
-                  className="mx-auto max-h-72 rounded-xl shadow-lg object-cover mb-6"
-                />
+                <div className="relative mx-auto mb-6 w-full max-w-lg h-72">
+                  <Image
+                    src={rifa.imagen_url}
+                    alt={rifa.nombre}
+                    fill
+                    className="rounded-xl shadow-lg object-cover"
+                  />
+                </div>
               )}
               <h2 className="text-3xl font-bold text-gray-800">{rifa.nombre}</h2>
               {rifa.descripcion && <p className="text-gray-500 mt-2">{rifa.descripcion}</p>}

@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase'
 import { signIn, signOut } from '@/lib/auth'
 import { Rifa, Participante, Ganador } from '@/types/database'
 import Link from 'next/link'
+import Image from 'next/image'
 import type { Session } from '@supabase/supabase-js'
 
 export default function AdminPage() {
@@ -346,7 +347,9 @@ function AdminDashboard({ onSignOut }: { onSignOut: () => void }) {
               <div className="space-y-6">
                 <div className="bg-white rounded-xl shadow p-6">
                   {rifa.imagen_url && (
-                    <img src={rifa.imagen_url} alt={rifa.nombre} className="w-full max-h-64 object-cover rounded-lg mb-4" />
+                    <div className="relative w-full h-48 mb-4">
+                      <Image src={rifa.imagen_url} alt={rifa.nombre} fill className="object-cover rounded-lg" />
+                    </div>
                   )}
                   <div className="flex justify-between items-start mb-4">
                     <div>
