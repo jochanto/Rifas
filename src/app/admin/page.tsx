@@ -300,6 +300,14 @@ function AdminDashboard({ session, onSignOut }: { session: Session; onSignOut: (
     loadAll()
   }
 
+  async function eliminarDelHistorial(rifaId: string) {
+    if (!confirm('¿Eliminar esta rifa del historial? Se borrarán los datos del ganador y la rifa.')) return
+    await supabase.from('ganadores').delete().eq('rifa_id', rifaId)
+    await supabase.from('participantes').delete().eq('rifa_id', rifaId)
+    await supabase.from('rifas').delete().eq('id', rifaId)
+    loadAll()
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-indigo-600 text-white shadow-lg">
@@ -559,11 +567,12 @@ function AdminDashboard({ session, onSignOut }: { session: Session; onSignOut: (
                   <th className="px-4 py-3 text-left text-sm font-medium text-gray-600"># Ganador</th>
                   <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Ganador</th>
                   <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Fecha</th>
+                  <th className="px-4 py-3 text-right text-sm font-medium text-gray-600">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
                 {historial.length === 0 ? (
-                  <tr><td colSpan={4} className="px-4 py-8 text-center text-gray-400">No hay sorteos realizados</td></tr>
+                  <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400">No hay sorteos realizados</td></tr>
                 ) : (
                   historial.map((h) => (
                     <tr key={h.id} className="hover:bg-gray-50">
@@ -572,6 +581,14 @@ function AdminDashboard({ session, onSignOut }: { session: Session; onSignOut: (
                       <td className="px-4 py-3">{h.nombre_ganador}</td>
                       <td className="px-4 py-3 text-sm text-gray-500">
                         {new Date(h.fecha_sorteo_realizado).toLocaleString('es-CR')}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <button
+                          onClick={() => eliminarDelHistorial(h.rifa_id)}
+                          className="text-red-500 hover:text-red-700 text-sm"
+                        >
+                          Eliminar
+                        </button>
                       </td>
                     </tr>
                   ))
