@@ -325,6 +325,7 @@ function AdminDashboard({ onSignOut }: { onSignOut: () => void }) {
                       className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none text-sm file:mr-3 file:py-1 file:px-3 file:rounded-md file:border-0 file:bg-indigo-50 file:text-indigo-600 file:font-medium file:cursor-pointer"
                     />
                     {imagenPreview && (
+                      // eslint-disable-next-line @next/next/no-img-element
                       <img src={imagenPreview} alt="Preview" className="mt-2 rounded-lg max-h-48 object-cover" />
                     )}
                   </div>
