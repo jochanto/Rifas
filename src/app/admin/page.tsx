@@ -83,10 +83,11 @@ export default function AdminPage() {
     )
   }
 
-  return <AdminDashboard onSignOut={() => signOut()} />
+  return <AdminDashboard session={session} onSignOut={() => signOut()} />
 }
 
-function AdminDashboard({ onSignOut }: { onSignOut: () => void }) {
+function AdminDashboard({ session, onSignOut }: { session: Session; onSignOut: () => void }) {
+  const [rol, setRol] = useState<'admin' | 'vendedor' | null>(null)
   const [rifa, setRifa] = useState<Rifa | null>(null)
   const [participantes, setParticipantes] = useState<Participante[]>([])
   const [historial, setHistorial] = useState<(Ganador & { rifa_nombre?: string })[]>([])
@@ -102,9 +103,18 @@ function AdminDashboard({ onSignOut }: { onSignOut: () => void }) {
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState('')
   const [sorteoLoading, setSorteoLoading] = useState(false)
-  const [tab, setTab] = useState<'rifa' | 'historial'>('rifa')
+  const [tab, setTab] = useState<'rifa' | 'historial' | 'usuarios'>('rifa')
+  // Usuarios tab state
+  const [vendedores, setVendedores] = useState<{ id: string; nombre: string | null; email: string }[]>([])
+  const [nuevoEmail, setNuevoEmail] = useState('')
+  const [nuevaPassword, setNuevaPassword] = useState('')
+  const [nuevoNombre, setNuevoNombre] = useState('')
+  const [creatingUser, setCreatingUser] = useState(false)
 
   useEffect(() => {
+    supabase.from('perfiles').select('rol').eq('id', session.user.id).single().then(({ data }) => {
+      setRol((data?.rol as 'admin' | 'vendedor') ?? 'vendedor')
+    })
     loadAll()
     const sub = supabase
       .channel('admin-changes')
@@ -113,6 +123,7 @@ function AdminDashboard({ onSignOut }: { onSignOut: () => void }) {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'ganadores' }, () => loadAll())
       .subscribe()
     return () => { supabase.removeChannel(sub) }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   async function loadAll() {
@@ -243,6 +254,37 @@ function AdminDashboard({ onSignOut }: { onSignOut: () => void }) {
     loadAll()
   }
 
+  async function loadVendedores() {
+    const { data } = await supabase.from('perfiles').select('id, nombre, rol').eq('rol', 'vendedor')
+    if (!data) return
+    const emails = await Promise.all(
+      data.map(async (v) => {
+        const { data: u } = await supabase.auth.admin?.getUserById?.(v.id) ?? { data: null }
+        return { id: v.id, nombre: v.nombre, email: (u as { user?: { email?: string } } | null)?.user?.email ?? '—' }
+      })
+    )
+    setVendedores(emails)
+  }
+
+  async function crearVendedor(e: React.FormEvent) {
+    e.preventDefault()
+    setCreatingUser(true)
+    setError('')
+    const { data: { session: s } } = await supabase.auth.getSession()
+    const res = await fetch('/api/crear-usuario', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${s?.access_token}` },
+      body: JSON.stringify({ email: nuevoEmail, password: nuevaPassword, nombre: nuevoNombre }),
+    })
+    const json = await res.json()
+    if (!res.ok) { setError(json.error); setCreatingUser(false); return }
+    setNuevoEmail('')
+    setNuevaPassword('')
+    setNuevoNombre('')
+    setCreatingUser(false)
+    loadVendedores()
+  }
+
   async function nuevaRifa() {
     setRifa(null)
     setParticipantes([])
@@ -279,12 +321,22 @@ function AdminDashboard({ onSignOut }: { onSignOut: () => void }) {
           >
             Rifa Actual
           </button>
-          <button
-            onClick={() => setTab('historial')}
-            className={`px-4 py-2 rounded-lg font-medium transition ${tab === 'historial' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-100'}`}
-          >
-            Historial
-          </button>
+          {rol === 'admin' && (
+            <button
+              onClick={() => setTab('historial')}
+              className={`px-4 py-2 rounded-lg font-medium transition ${tab === 'historial' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-100'}`}
+            >
+              Historial
+            </button>
+          )}
+          {rol === 'admin' && (
+            <button
+              onClick={() => { setTab('usuarios'); loadVendedores() }}
+              className={`px-4 py-2 rounded-lg font-medium transition ${tab === 'usuarios' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-100'}`}
+            >
+              Usuarios
+            </button>
+          )}
         </div>
 
         {error && (
@@ -298,6 +350,14 @@ function AdminDashboard({ onSignOut }: { onSignOut: () => void }) {
           <>
             {!rifa ? (
               <div className="bg-white rounded-xl shadow p-6 max-w-lg">
+                {rol !== 'admin' ? (
+                  <div className="text-center py-12 text-gray-400">
+                    <div className="text-5xl mb-4">🎟️</div>
+                    <p className="text-lg font-medium">No hay una rifa activa en este momento.</p>
+                    <p className="text-sm mt-2">Espera a que el administrador cree una nueva rifa.</p>
+                  </div>
+                ) : (
+                <>
                 <h2 className="text-xl font-bold mb-4">Crear Nueva Rifa</h2>
                 <form onSubmit={crearRifa} className="space-y-4">
                   <div>
@@ -360,6 +420,8 @@ function AdminDashboard({ onSignOut }: { onSignOut: () => void }) {
                     {uploading ? 'Subiendo imagen...' : 'Crear Rifa'}
                   </button>
                 </form>
+                </>
+                )}
               </div>
             ) : (
               <div className="space-y-6">
@@ -381,6 +443,7 @@ function AdminDashboard({ onSignOut }: { onSignOut: () => void }) {
                         </p>
                       )}
                     </div>
+                    {rol === 'admin' && (
                     <div className="flex gap-2">
                       <button
                         onClick={realizarSorteo}
@@ -402,6 +465,7 @@ function AdminDashboard({ onSignOut }: { onSignOut: () => void }) {
                         Eliminar Rifa
                       </button>
                     </div>
+                    )}
                   </div>
 
                   <form onSubmit={agregarParticipante} className="flex flex-wrap gap-3 items-end border-t pt-4">
@@ -509,6 +573,71 @@ function AdminDashboard({ onSignOut }: { onSignOut: () => void }) {
                 )}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {tab === 'usuarios' && rol === 'admin' && (
+          <div className="space-y-6 max-w-lg">
+            <div className="bg-white rounded-xl shadow p-6">
+              <h2 className="text-xl font-bold mb-4">Crear Vendedor</h2>
+              <form onSubmit={crearVendedor} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Nombre</label>
+                  <input
+                    value={nuevoNombre}
+                    onChange={(e) => setNuevoNombre(e.target.value)}
+                    className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                    placeholder="Nombre del vendedor"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                  <input
+                    type="email"
+                    value={nuevoEmail}
+                    onChange={(e) => setNuevoEmail(e.target.value)}
+                    className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                    required
+                    placeholder="vendedor@ejemplo.com"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Contraseña</label>
+                  <input
+                    type="password"
+                    value={nuevaPassword}
+                    onChange={(e) => setNuevaPassword(e.target.value)}
+                    className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                    required
+                    minLength={6}
+                    placeholder="Mínimo 6 caracteres"
+                  />
+                </div>
+                <button type="submit" disabled={creatingUser} className="w-full bg-indigo-600 text-white py-2 rounded-lg font-medium hover:bg-indigo-700 transition disabled:opacity-50">
+                  {creatingUser ? 'Creando...' : 'Crear Vendedor'}
+                </button>
+              </form>
+            </div>
+            {vendedores.length > 0 && (
+              <div className="bg-white rounded-xl shadow overflow-hidden">
+                <table className="w-full">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Nombre</th>
+                      <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Email</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {vendedores.map((v) => (
+                      <tr key={v.id} className="hover:bg-gray-50">
+                        <td className="px-4 py-3">{v.nombre ?? '—'}</td>
+                        <td className="px-4 py-3 text-gray-500">{v.email}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         )}
       </div>
