@@ -6,6 +6,7 @@ import { signIn, signOut } from '@/lib/auth'
 import { Rifa, Participante, Ganador } from '@/types/database'
 import Link from 'next/link'
 import Image from 'next/image'
+import NumberGrid from '@/components/NumberGrid'
 import type { Session } from '@supabase/supabase-js'
 
 export default function AdminPage() {
@@ -539,6 +540,10 @@ function AdminDashboard({ session, onSignOut }: { session: Session; onSignOut: (
                       )}
                     </tbody>
                   </table>
+                </div>
+
+                <div className="bg-white rounded-xl shadow p-6">
+                  <NumberGrid participantes={participantes} ganador={null} />
                 </div>
               </div>
             )}
