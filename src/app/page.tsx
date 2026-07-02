@@ -104,6 +104,13 @@ export default function Home() {
               )}
               <h2 className="text-3xl font-bold text-gray-800">{rifa.nombre}</h2>
               {rifa.descripcion && <p className="text-gray-500 mt-2">{rifa.descripcion}</p>}
+              {rifa.precio_numero != null && (
+                <div className="inline-block mt-3 bg-green-50 border border-green-200 rounded-xl px-6 py-2">
+                  <span className="text-green-700 font-bold text-xl">
+                    {rifa.precio_numero.toLocaleString('es-CR', { style: 'currency', currency: 'CRC', maximumFractionDigits: 0 })} por número
+                  </span>
+                </div>
+              )}
             </div>
 
             {rifa.estado === 'completado' && ganador ? (
